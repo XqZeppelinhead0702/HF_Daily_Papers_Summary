@@ -1,0 +1,100 @@
+name: Daily Papers
+
+on:
+  schedule:
+    # 20:30 Beijing time (UTC+8).
+    - cron: '30 12 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Paper date (YYYY-MM-DD), or leave blank for today in Asia/Shanghai'
+        type: string
+      demo:
+        description: 'Generate a sample report without using the LLM'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paper-digest-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project
+        run: python -m pip install .
+
+      - name: Set up digest configuration
+        env:
+          DIGEST_CONFIG_YAML: ${{ vars.PAPER_DIGEST_CONFIG_YAML }}
+        run: |
+          if [[ -n "$DIGEST_CONFIG_YAML" ]]; then
+            printf '%s' "$DIGEST_CONFIG_YAML" > config.yaml
+          else
+            cp config.example.yaml config.yaml
+          fi
+
+      - name: Restore SQLite cache
+        id: sqlite
+        if: ${{ github.event.repository.private && !inputs.demo }}
+        uses: actions/cache/restore@v6
+        with:
+          path: data/digest.sqlite3
+          key: paper-digest-db-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: paper-digest-db-v1-
+
+      - name: Generate report
+        id: report
+        env:
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_SCREEN_MODEL: ${{ vars.LLM_SCREEN_MODEL }}
+          REPORT_DATE: ${{ inputs.date }}
+          DEMO: ${{ inputs.demo }}
+        run: |
+          args=()
+          if [[ -n "$REPORT_DATE" ]]; then
+            args+=("--date=$REPORT_DATE")
+          fi
+          if [[ "$DEMO" == 'true' ]]; then
+            python -m paper_digest demo "${args[@]}"
+          elif [[ "$GITHUB_EVENT_NAME" == 'schedule' ]]; then
+            python -m paper_digest run --lookback 2
+          else
+            python -m paper_digest run "${args[@]}"
+          fi
+
+      - name: Upload reports and optional PDFs
+        if: ${{ !cancelled() && steps.report.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper-digest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/*.html
+            reports/*.md
+            papers/*.pdf
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Save updated SQLite cache
+        if: ${{ !cancelled() && steps.sqlite.outcome == 'success' && hashFiles('data/digest.sqlite3') != '' }}
+        uses: actions/cache/save@v6
+        with:
+          path: data/digest.sqlite3
+          key: ${{ steps.sqlite.outputs.cache-primary-key }}
