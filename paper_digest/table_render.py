@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from markupsafe import Markup
 
+from .locales import DEFAULT_REPORT_LANGUAGE, REPORT_TEXT, ReportLanguage
 from .math_render import INLINE_CONTENT, prose_to_html
 
 
@@ -81,7 +82,7 @@ def _read_table(lines: list[str], index: int) -> tuple[Table, int] | None:
     return None
 
 
-def _table_html(table: Table) -> Markup:
+def _table_html(table: Table, label: str) -> Markup:
     headings = Markup("").join(
         Markup('<th scope="col" class="align-{}">{}</th>').format(alignment, prose_to_html(cell))
         for alignment, cell in zip(table.alignments, table.header)
@@ -94,12 +95,12 @@ def _table_html(table: Table) -> Markup:
         for row in table.rows
     )
     return Markup(
-        '<div class="table-scroll" role="region" aria-label="论文讲解表格" tabindex="0">'
+        '<div class="table-scroll" role="region" aria-label="{}" tabindex="0">'
         '<table class="explanation-table"><thead><tr>{}</tr></thead><tbody>{}</tbody></table></div>'
-    ).format(headings, rows)
+    ).format(label, headings, rows)
 
 
-def explanation_text_to_html(text: str) -> Markup:
+def explanation_text_to_html(text: str, language: ReportLanguage = DEFAULT_REPORT_LANGUAGE) -> Markup:
     lines = text.splitlines()
     parts: list[Markup] = []
     prose_start = index = 0
@@ -112,7 +113,7 @@ def explanation_text_to_html(text: str) -> Markup:
         if prose:
             parts.append(Markup("<p>{}</p>").format(prose_to_html(prose)))
         table, index = found
-        parts.append(_table_html(table))
+        parts.append(_table_html(table, REPORT_TEXT[language]["table"]))
         prose_start = index
     tail = "\n".join(lines[prose_start:]).strip("\n")
     if tail:

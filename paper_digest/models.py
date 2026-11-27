@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .locales import DEFAULT_REPORT_LANGUAGE, ReportLanguage
+
 
 class Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -113,3 +115,4 @@ class Digest(Model):
     candidate_count: int
     entries: list[DigestEntry]
     demo: bool = False
+    language: ReportLanguage = DEFAULT_REPORT_LANGUAGE

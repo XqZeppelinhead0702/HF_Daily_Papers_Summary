@@ -4,6 +4,8 @@ from datetime import date
 from pathlib import Path
 from shutil import copyfile
 
+from .config import load_settings
+from .locales import DEFAULT_REPORT_LANGUAGE, REPORT_TEXT, ReportLanguage
 from .report import TEMPLATES, write_file
 
 ARCHIVE_LIMIT = 3
@@ -23,7 +25,9 @@ def _dated_reports(directory: Path) -> list[Path]:
     return sorted(files, key=lambda path: path.name, reverse=True)
 
 
-def build_site(reports_dir: Path, archive_dir: Path, output_dir: Path) -> int:
+def build_site(
+    reports_dir: Path, archive_dir: Path, output_dir: Path, *, language: ReportLanguage = DEFAULT_REPORT_LANGUAGE,
+) -> int:
     output = output_dir / "reports"
     if len({path.resolve() for path in (reports_dir, archive_dir, output)}) != 3:
         raise ValueError("Source reports, Pages history, and site output must use separate directories.")
@@ -42,7 +46,9 @@ def build_site(reports_dir: Path, archive_dir: Path, output_dir: Path) -> int:
         copyfile(report, output / report.name, follow_symlinks=False)
 
     days = [report.stem for report in published]
-    homepage = TEMPLATES.get_template("pages_index.html").render(latest=days[0], earlier=days[1:])
+    homepage = TEMPLATES.get_template("pages_index.html").render(
+        latest=days[0], earlier=days[1:], language=language, text=REPORT_TEXT[language],
+    )
     write_file(output_dir / "index.html", homepage)
     published_names = {report.name for report in published}
     for report in _dated_reports(output):
@@ -57,9 +63,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build the GitHub Pages site from exported paper reports")
     parser.add_argument("--reports", type=Path, default=Path("reports"))
     parser.add_argument("--archive", type=Path, default=Path("data/pages-history"))
+    parser.add_argument("--config", type=Path, help="Read the archive index language from this digest configuration")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    count = build_site(args.reports, args.archive, args.output)
+    language = load_settings(args.config).report.language if args.config else DEFAULT_REPORT_LANGUAGE
+    count = build_site(args.reports, args.archive, args.output, language=language)
     if count:
         print(f"Prepared {count} dated reports for GitHub Pages.")
     else:

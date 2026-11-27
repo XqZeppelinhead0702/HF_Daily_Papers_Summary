@@ -8,6 +8,7 @@ import yaml
 from dotenv import load_dotenv
 from pydantic import Field
 
+from .locales import DEFAULT_REPORT_LANGUAGE, ReportLanguage
 from .models import Model
 
 
@@ -30,6 +31,7 @@ class PaperOptions(Model):
 
 
 class ReportOptions(Model):
+    language: ReportLanguage = DEFAULT_REPORT_LANGUAGE
     html: bool = True
     markdown: bool = False
     output_dir: Path = Path("reports")

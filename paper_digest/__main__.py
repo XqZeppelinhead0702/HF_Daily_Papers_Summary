@@ -50,7 +50,8 @@ def main() -> int:
         today = datetime.now(ZoneInfo(settings.timezone)).date()
         target = args.date or today
         if args.command == "demo":
-            output = write_html(demo_digest(target.isoformat()), settings.report.output_dir / "demo.html")
+            digest = demo_digest(target.isoformat(), language=settings.report.language)
+            output = write_html(digest, settings.report.output_dir / "demo.html")
             print(output)
             return 0
         if args.command == "render":

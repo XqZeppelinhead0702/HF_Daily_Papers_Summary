@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from pypdf import PdfReader
 
 from .config import PaperOptions
+from .locales import DEFAULT_REPORT_LANGUAGE, REPORT_TEXT, ReportLanguage
 from .models import Paper, Passage, Source
 
 LOGGER = logging.getLogger(__name__)
@@ -109,7 +110,7 @@ def list_papers(client: httpx.Client, day: date, limit: int) -> list[Paper]:
     return list(papers.values())[:limit]
 
 
-def extract_html(body: bytes, url: str) -> list[Passage]:
+def extract_html(body: bytes, url: str, *, language: ReportLanguage = DEFAULT_REPORT_LANGUAGE) -> list[Passage]:
     soup = BeautifulSoup(body, "html.parser")
     article = soup.select_one("article:has(.ltx_section)")
     if article is None:
@@ -118,7 +119,7 @@ def extract_html(body: bytes, url: str) -> list[Passage]:
         node.decompose()
 
     passages: list[Passage] = []
-    label, link = "正文开头", url
+    label, link = REPORT_TEXT[language]["html_opening"], url
     paragraphs: list[str] = []
 
     def flush() -> None:
@@ -151,13 +152,14 @@ def extract_html(body: bytes, url: str) -> list[Passage]:
     return passages if sum(len(item.text) for item in passages) >= 800 else []
 
 
-def extract_pdf(body: bytes, url: str) -> list[Passage]:
+def extract_pdf(body: bytes, url: str, *, language: ReportLanguage = DEFAULT_REPORT_LANGUAGE) -> list[Passage]:
     passages = []
     reader = PdfReader(BytesIO(body))
     for number, page in enumerate(reader.pages, 1):
         content = (page.extract_text() or "").strip()
         if content:
-            passages.append(Passage(id=f"P{number}", label=f"PDF 第 {number} 页", text=content,
+            label = REPORT_TEXT[language]["pdf_page"].format(number=number)
+            passages.append(Passage(id=f"P{number}", label=label, text=content,
                                     url=f"{url}#page={number}"))
     return passages if sum(len(item.text) for item in passages) >= 800 else []
 
@@ -180,13 +182,15 @@ def bound_passages(source: Source, limit: int) -> Source:
     return source.model_copy(update={"passages": sorted(truncated, key=lambda item: order[item.id]), "is_excerpt": True})
 
 
-def read_paper(client: httpx.Client, paper: Paper, options: PaperOptions) -> Source:
+def read_paper(
+    client: httpx.Client, paper: Paper, options: PaperOptions, *, language: ReportLanguage = DEFAULT_REPORT_LANGUAGE,
+) -> Source:
     html_url = f"https://arxiv.org/html/{paper.id}"
     pdf_url = f"https://arxiv.org/pdf/{paper.id}"
     html: list[Passage] = []
     pdf: list[Passage] = []
     try:
-        html = extract_html(get_bytes(client, html_url, 8_000_000), html_url)
+        html = extract_html(get_bytes(client, html_url, 8_000_000), html_url, language=language)
     except SourceError as error:
         LOGGER.info("%s HTML 正文不可用，%s", paper.id, error)
 
@@ -207,7 +211,7 @@ def read_paper(client: httpx.Client, paper: Paper, options: PaperOptions) -> Sou
                     LOGGER.warning("%s PDF 保存失败，%s", paper.id, error)
             if not html and options.allow_pdf_fallback:
                 try:
-                    pdf = extract_pdf(body, pdf_url)
+                    pdf = extract_pdf(body, pdf_url, language=language)
                 except Exception as error:
                     LOGGER.warning("%s PDF 提取失败，%s", paper.id, type(error).__name__)
 
@@ -217,6 +221,7 @@ def read_paper(client: httpx.Client, paper: Paper, options: PaperOptions) -> Sou
         source = Source(kind="pdf", passages=pdf)
     else:
         abstract = re.sub(r"\s+", " ", paper.abstract).strip()
-        passages = [Passage(id="A1", label="摘要", text=abstract, url=paper.arxiv_url)] if abstract else []
+        label = REPORT_TEXT[language]["abstract"]
+        passages = [Passage(id="A1", label=label, text=abstract, url=paper.arxiv_url)] if abstract else []
         source = Source(kind="abstract", passages=passages)
     return bound_passages(source, options.max_source_chars)

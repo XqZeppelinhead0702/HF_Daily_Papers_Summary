@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="{{ digest.language }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>论文日报 · {{ digest.date }}</title>
+  <title>{{ text.title }} · {{ digest.date }}</title>
   <style>{% include 'digest.css' %}</style>
 </head>
 <body>
@@ -18,7 +18,7 @@
           {% elif block.kind == 'equation' %}
             <div class="equation-block">{{ block.text | equation }}</div>
           {% else %}
-            {{ block.text | explanation_text }}
+            {{ block.text | explanation_text(digest.language) }}
           {% endif %}
           {% if block.evidence %}
             <div class="references">
@@ -43,24 +43,24 @@
         <span>Hugging Face Daily Papers</span>
         <div class="mast-actions">
           <time datetime="{{ digest.date }}">{{ digest.date }}</time>
-          <a class="mast-download" href="./{{ report_filename }}" download>下载 HTML</a>
+          <a class="mast-download" href="./{{ report_filename }}" download>{{ text.download }}</a>
         </div>
       </div>
       <div class="mast-main">
-        <h1>论文日报</h1>
+        <h1>{{ text.title }}</h1>
         <dl class="counts">
-          <div><dt>候选论文</dt><dd><strong>{{ digest.candidate_count }}</strong> 篇</dd></div>
-          <div><dt>入选论文</dt><dd><strong>{{ digest.entries|length }}</strong> 篇</dd></div>
+          <div><dt>{{ text.candidates }}</dt><dd><strong>{{ digest.candidate_count }}</strong>{{ text.paper_count_unit }}</dd></div>
+          <div><dt>{{ text.selected }}</dt><dd><strong>{{ digest.entries|length }}</strong>{{ text.paper_count_unit }}</dd></div>
         </dl>
       </div>
-      {% if digest.demo %}<p class="demo">离线演示。论文与实验均为虚构示例。</p>{% endif %}
+      {% if digest.demo %}<p class="demo">{{ text.demo_notice }}</p>{% endif %}
     </div>
   </header>
 
   <main class="wrap layout{% if not digest.entries %} empty{% endif %}">
     {% if digest.entries %}
       <nav class="toc" id="paper-directory" aria-labelledby="paper-directory-title">
-        <h2 id="paper-directory-title">今日目录</h2>
+        <h2 id="paper-directory-title">{{ text.contents }}</h2>
         <ul>
           {% for entry in digest.entries %}
             <li>
@@ -74,7 +74,7 @@
     <div class="stack">
       {% if not digest.entries %}
         <section class="paper empty-state">
-          <h2>{{ '今天没有符合筛选条件的论文' if digest.candidate_count else '此日期暂无候选论文' }}</h2>
+          <h2>{{ text.no_selected if digest.candidate_count else text.no_candidates }}</h2>
         </section>
       {% endif %}
       {% for entry in digest.entries %}
@@ -90,18 +90,18 @@
                   {% for topic in entry.match.topics %}<span class="topic">{{ topic }}</span>{% endfor %}
                 </div>
               {% endif %}
-              <span class="score">相关性 {{ entry.match.score }}/100</span>
-              <span class="coverage {{ entry.source_kind }}">{{ source_labels[entry.source_kind] }}{% if entry.is_excerpt %}节选{% endif %}</span>
+              <span class="score">{{ text.relevance }} {{ entry.match.score }}/100</span>
+              <span class="coverage {{ entry.source_kind }}">{{ text[entry.source_kind ~ '_source'] }}{% if entry.is_excerpt %}{{ text.excerpt }}{% endif %}</span>
             </div>
             {% if result %}
               <p class="overview">{{ result.overview | prose }}</p>
             {% else %}
-              <p class="unavailable">讲解暂不可用。可以稍后补跑。</p>
+              <p class="unavailable">{{ text.unavailable }}</p>
             {% endif %}
-            <p class="why"><strong>入选理由</strong>{{ entry.match.reason | prose }}</p>
+            <p class="why"><strong>{{ text.selection_reason }}</strong>{{ entry.match.reason | prose }}</p>
             {% if not digest.demo %}
               <div class="paper-links">
-                <a href="{{ paper.arxiv_url }}">arXiv 原文 ↗</a>
+                <a href="{{ paper.arxiv_url }}">{{ text.arxiv }} ↗</a>
                 <a href="{{ paper.hf_url }}">Hugging Face ↗</a>
               </div>
             {% endif %}
@@ -110,10 +110,10 @@
           {% if result %}
             {% set sections = result.sections %}
             <details class="reading"{% if loop.first %} open{% endif %}>
-              <summary>详细讲解</summary>
+              <summary>{{ text.explanation }}</summary>
               <div class="reading-body">
                 {% if sections|length > 1 %}
-                  <nav class="section-nav" aria-label="本篇讲解目录">
+                  <nav class="section-nav" aria-label="{{ text.paper_contents }}">
                     <ul>
                       {% for section in sections %}
                         <li><a href="#{{ paper_anchor }}-section-{{ loop.index }}">{{ section.title | prose }}</a></li>
@@ -124,7 +124,7 @@
                 {% for section in sections %}
                   {{ explanation_section(section, paper_anchor ~ '-section-' ~ loop.index, entry.references) }}
                 {% endfor %}
-                <a class="back-link" href="#paper-directory">返回今日目录 ↑</a>
+                <a class="back-link" href="#paper-directory">{{ text.back_to_contents }} ↑</a>
               </div>
             </details>
           {% endif %}

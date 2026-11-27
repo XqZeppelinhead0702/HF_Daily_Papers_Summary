@@ -4,7 +4,7 @@ from datetime import date
 import httpx
 
 from .config import Settings
-from .llm import EXPLAIN_RULES, SCREEN_RULES, SINGLE_SCREEN_RULES, LLM, LLMError
+from .llm import EXPLAIN_RULES, OUTPUT_LANGUAGE_RULES, SCREEN_RULES, SINGLE_SCREEN_RULES, LLM, LLMError
 from .models import Digest, DigestEntry, Explanation, Match, Reference, Screening
 from .sources import list_papers, read_paper
 from .storage import Store, cache_key
@@ -19,17 +19,19 @@ def run_day(day: date, settings: Settings, client: httpx.Client, llm: LLM, store
     interests = [interest.model_dump() for interest in settings.interests]
     provider = llm.connection.base_url
     batch_size = settings.screen_batch_size
+    language = settings.report.language
+    language_rule = OUTPUT_LANGUAGE_RULES[language]
 
     for start in range(0, len(papers), batch_size):
         batch = papers[start:start + batch_size]
         rules = SINGLE_SCREEN_RULES if len(batch) == 1 else SCREEN_RULES
         key = cache_key(
             "screen-v1", provider, llm.connection.screen_model, llm.options.json_mode,
-            rules, settings.screening_prompt, interests, [paper.model_dump() for paper in batch],
+            rules, language_rule, settings.screening_prompt, interests, [paper.model_dump() for paper in batch],
         )
         result = store.get(key, Screening)
         if result is None:
-            result = llm.screen(batch, settings.interests, settings.screening_prompt)
+            result = llm.screen(batch, settings.interests, settings.screening_prompt, language=language)
             store.put(key, result)
         matches.extend(result.matches)
 
@@ -42,18 +44,18 @@ def run_day(day: date, settings: Settings, client: httpx.Client, llm: LLM, store
     for match in chosen:
         paper = by_id[match.paper_id]
         LOGGER.info("%s 处理 %s", day, paper.id)
-        source = read_paper(client, paper, settings.papers)
+        source = read_paper(client, paper, settings.papers, language=language)
         entry = DigestEntry(paper=paper, match=match, source_kind=source.kind, is_excerpt=source.is_excerpt)
         if source.passages:
             key = cache_key(
                 "explain-v2", provider, llm.connection.model, llm.options.json_mode,
-                EXPLAIN_RULES, settings.explanation_prompt, paper.model_dump(), source.model_dump(),
+                EXPLAIN_RULES, language_rule, settings.explanation_prompt, paper.model_dump(), source.model_dump(),
             )
             explanation = store.get(key, Explanation)
             if explanation is None:
                 LOGGER.info("%s 按当前提示词生成讲解", paper.id)
                 try:
-                    explanation = llm.explain(paper, source, settings.explanation_prompt)
+                    explanation = llm.explain(paper, source, settings.explanation_prompt, language=language)
                 except LLMError as error:
                     LOGGER.warning("%s 讲解生成失败，%s", paper.id, error)
                 else:
@@ -68,6 +70,6 @@ def run_day(day: date, settings: Settings, client: httpx.Client, llm: LLM, store
             LOGGER.warning("%s 暂无可用的论文摘要或正文", paper.id)
         entries.append(entry)
 
-    digest = Digest(date=day.isoformat(), candidate_count=len(papers), entries=entries)
+    digest = Digest(date=day.isoformat(), candidate_count=len(papers), entries=entries, language=language)
     store.put_digest(digest)
     return digest

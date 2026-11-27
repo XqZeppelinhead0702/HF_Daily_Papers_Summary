@@ -2,11 +2,11 @@ timezone: Asia/Shanghai
 database: data/digest.sqlite3
 
 interests:
-  - name: 开放词汇分割
-    description: 关注模型如何识别训练时未见的类别，以及如何验证泛化能力。
+  - name: Open-vocabulary segmentation
+    description: Focus on how models recognize categories absent during training and how the authors evaluate generalization.
     keywords: [open-vocabulary segmentation, zero-shot segmentation, unseen classes]
-  - name: 多模态视觉
-    description: 关注视觉语言模型如何处理定位、图像理解与视觉推理任务。
+  - name: Multimodal vision
+    description: Focus on vision-language models for visual grounding, image understanding, and visual reasoning.
     keywords: [vision-language model, visual grounding, multimodal reasoning]
 
 max_candidates: 60
@@ -15,14 +15,14 @@ min_score: 65
 max_papers_per_day: 5
 
 screening_prompt: |
-  优先选择有明确方法贡献和实验验证的论文。
-  如果研究方向只出现在相关工作中，判为低相关。允许同义词和未直接写出关键词的论文入选。
+  Prioritize papers that make a clear methodological contribution backed by experiments.
+  Score a topic as weakly related if it appears only in related work. Accept relevant papers that use synonyms or omit the exact keywords.
 
 explanation_prompt: |
-  用中文向有深度学习基础的研究生讲解，保留必要的英文术语。
-  先讲问题和方法的直觉，再按输入、关键模块、输出解释方法。
-  选择最能支撑结论的实验，交代数据集、指标、对比条件和结果。
-  最后给出一个适合组会讨论的问题。
+  Write for graduate students with a background in deep learning.
+  Introduce the problem and the intuition behind the method, then explain its inputs, main components, and outputs.
+  Discuss the experiments that best support the conclusions, including datasets, metrics, comparison conditions, and results.
+  End with one question for a research group discussion.
 
 llm:
   json_mode: true
@@ -35,6 +35,7 @@ papers:
   max_source_chars: 36000
 
 report:
+  language: en
   html: true
   markdown: false
   output_dir: reports

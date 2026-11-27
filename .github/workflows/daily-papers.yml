@@ -116,7 +116,7 @@ jobs:
         if: ${{ steps.pages_history.outcome != 'skipped' }}
         run: |
           site_dir="$(mktemp -d)"
-          python -m paper_digest.pages --output "$site_dir"
+          python -m paper_digest.pages --config config.yaml --output "$site_dir"
           if [[ -f "$site_dir/index.html" ]]; then
             echo "directory=$site_dir" >> "$GITHUB_OUTPUT"
             echo 'ready=true' >> "$GITHUB_OUTPUT"

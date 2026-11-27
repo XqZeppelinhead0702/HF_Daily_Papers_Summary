@@ -1,3 +1,4 @@
+from .locales import DEFAULT_REPORT_LANGUAGE, ReportLanguage
 from .models import (
     Digest,
     DigestEntry,
@@ -12,7 +13,15 @@ from .models import (
 )
 
 
-def demo_digest(day: str) -> Digest:
+REGION_EQUATION = r"s_{ic}=\frac{r_i^{\mathsf T}t_c}{\lVert r_i\rVert_2\,\lVert t_c\rVert_2}"
+REGION_CODE = (
+    "def classify_regions(region_features, text_features):\n"
+    "    scores = region_features @ text_features.T\n"
+    "    return scores.argmax(axis=1)"
+)
+
+
+def _chinese_demo(day: str) -> Digest:
     entries = [
         DigestEntry(
             paper=Paper(id="0000.00001", title="Region Tokens for Open-Vocabulary Segmentation"),
@@ -41,7 +50,7 @@ def demo_digest(day: str) -> Digest:
                         ),
                         ExplanationBlock(
                             kind="equation",
-                            text=r"s_{ic}=\frac{r_i^{\mathsf T}t_c}{\lVert r_i\rVert_2\,\lVert t_c\rVert_2}",
+                            text=REGION_EQUATION,
                             evidence=["S1"],
                         ),
                         ExplanationBlock(
@@ -57,9 +66,7 @@ def demo_digest(day: str) -> Digest:
                         ),
                         ExplanationBlock(
                             kind="code",
-                            text="def classify_regions(region_features, text_features):\n"
-                                 "    scores = region_features @ text_features.T\n"
-                                 "    return scores.argmax(axis=1)",
+                            text=REGION_CODE,
                             evidence=[],
                         ),
                     ]),
@@ -99,3 +106,70 @@ def demo_digest(day: str) -> Digest:
         ),
     ]
     return Digest(date=day, candidate_count=12, entries=entries, demo=True)
+
+
+def _english_demo(day: str) -> Digest:
+    paper = Paper(id="0000.00001", title="Region Tokens for Open-Vocabulary Segmentation")
+    entry = DigestEntry(
+        paper=paper,
+        match=Match(
+            paper_id=paper.id, score=94, topics=["Open-vocabulary segmentation", "Multimodal vision"],
+            reason="It tests whether the model can identify categories that were absent during training.",
+        ),
+        source_kind="demo",
+        explanation=Explanation(
+            overview=(
+                "The method encodes individual image regions and matches them against text labels. "
+                "This lets the model segment categories it has never seen during training."
+            ),
+            sections=[
+                ExplanationSection(title="Motivation", blocks=[
+                    ExplanationBlock(
+                        heading="From objects to pixels",
+                        text=(
+                            "Recognizing a bicycle in an image leaves open which pixels belong to it. "
+                            "**Open-vocabulary segmentation** uses text labels to assign those pixels even for a new class."
+                        ),
+                        evidence=[],
+                    ),
+                ]),
+                ExplanationSection(title="Method", blocks=[
+                    ExplanationBlock(
+                        text=r"Propose regions and encode each one. Compare region vector \(r_i\) with class text vector \(t_c\).",
+                        evidence=["S1"],
+                    ),
+                    ExplanationBlock(kind="equation", text=REGION_EQUATION, evidence=["S1"]),
+                ]),
+                ExplanationSection(title="Implementation example", blocks=[
+                    ExplanationBlock(
+                        text="With normalized vectors, a matrix multiplication scores all region and label pairs.",
+                        evidence=[],
+                    ),
+                    ExplanationBlock(kind="code", text=REGION_CODE, evidence=[]),
+                ]),
+                ExplanationSection(title="Experiments and limitations", blocks=[
+                    ExplanationBlock(
+                        text="This fictional experiment uses the same image encoder and test split for both methods.\n\n"
+                             "| Method | Unseen-class mIoU ↑ |\n"
+                             "| :--- | ---: |\n"
+                             "| Image-level matching | 28.1 |\n"
+                             "| Region-level matching | **31.4** |",
+                        evidence=["S2"],
+                    ),
+                    ExplanationBlock(
+                        text="A later matching step cannot recover small objects that the region proposals miss.",
+                        evidence=["S1"],
+                    ),
+                ]),
+            ],
+        ),
+        references={
+            "S1": Reference(id="S1", label="Example · Section 3 (Method)"),
+            "S2": Reference(id="S2", label="Example · Table 2"),
+        },
+    )
+    return Digest(date=day, candidate_count=12, entries=[entry], demo=True, language="en")
+
+
+def demo_digest(day: str, *, language: ReportLanguage = DEFAULT_REPORT_LANGUAGE) -> Digest:
+    return _english_demo(day) if language == "en" else _chinese_demo(day)

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="{{ language }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>论文日报 · 历史归档</title>
+  <title>{{ text.title }} · {{ text.archive_title }}</title>
   <style>
     {% include 'digest.css' %}
     .archive { max-width: 58rem; display: grid; gap: 1.8rem; padding-block: 1.9rem 3rem; }
@@ -26,27 +26,27 @@
   <header class="masthead">
     <div class="wrap">
       <div class="mast-top"><span>Hugging Face Daily Papers</span></div>
-      <div class="mast-main"><h1>论文日报</h1></div>
+      <div class="mast-main"><h1>{{ text.title }}</h1></div>
     </div>
   </header>
   <main class="wrap archive">
     <section class="paper latest" aria-labelledby="latest-title">
-      <h2 id="latest-title">最新日报</h2>
+      <h2 id="latest-title">{{ text.latest }}</h2>
       <div class="archive-actions">
-        <a class="archive-read" href="reports/{{ latest }}.html">阅读 <time datetime="{{ latest }}">{{ latest }}</time> 日报</a>
-        <a class="archive-download" href="reports/{{ latest }}.html" download aria-label="下载 {{ latest }} 日报 HTML">下载 HTML</a>
+        <a class="archive-read" href="reports/{{ latest }}.html">{{ text.read_latest_prefix }}<time datetime="{{ latest }}">{{ latest }}</time>{{ text.read_latest_suffix }}</a>
+        <a class="archive-download" href="reports/{{ latest }}.html" download aria-label="{{ text.download_date.format(day=latest) }}">{{ text.download }}</a>
       </div>
     </section>
     {% if earlier %}
       <section class="history" aria-labelledby="history-title">
-        <h2 id="history-title">往期日报</h2>
+        <h2 id="history-title">{{ text.earlier }}</h2>
         <ul>
           {% for day in earlier %}
             <li>
               <time datetime="{{ day }}">{{ day }}</time>
               <div class="archive-actions">
-                <a class="archive-read" href="reports/{{ day }}.html" aria-label="阅读 {{ day }} 日报">阅读日报</a>
-                <a class="archive-download" href="reports/{{ day }}.html" download aria-label="下载 {{ day }} 日报 HTML">下载 HTML</a>
+                <a class="archive-read" href="reports/{{ day }}.html" aria-label="{{ text.read_date.format(day=day) }}">{{ text.read }}</a>
+                <a class="archive-download" href="reports/{{ day }}.html" download aria-label="{{ text.download_date.format(day=day) }}">{{ text.download }}</a>
               </div>
             </li>
           {% endfor %}

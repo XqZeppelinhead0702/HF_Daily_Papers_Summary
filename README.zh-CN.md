@@ -2,7 +2,7 @@
 
 [English](README.md) | **简体中文**
 
-按你的研究方向筛选 [Hugging Face Daily Papers](https://huggingface.co/papers)，读取入选论文可获取的原文，再用外部 LLM 生成讲解。每个日期有一份独立日报，包含目录、入选理由、方法、实验、局限和原文链接。示例配置默认生成中文讲解，讲解语言、受众和详略都可以通过提示词设置。
+按你的研究方向筛选 [Hugging Face Daily Papers](https://huggingface.co/papers)，读取入选论文可获取的原文，再用外部 LLM 生成讲解。每个日期有一份独立日报，包含目录、入选理由、方法、实验、局限和原文链接。项目默认示例生成英文 HTML，也提供简体中文模板。提示词用于设置讲解受众和详略。
 
 ## 本地运行
 
@@ -31,7 +31,14 @@ Windows 找不到 `python` 时，如果已安装 Python 启动器，可以把前
 
 ### 2. 配置模型和研究方向
 
-首次配置时，分别从 [`.env.example`](.env.example) 和 [`config.example.yaml`](config.example.yaml) 复制出 `.env` 和 `config.yaml`。已有这两个文件时，直接编辑现有文件。
+首次配置时，从 [`.env.example`](.env.example) 复制出 `.env`，再任选下面一份完整模板复制为 `config.yaml`。已有 `config.yaml` 时，可直接编辑自己的配置。
+
+| 模板 | 输出 |
+| --- | --- |
+| [`config.example.yaml`](config.example.yaml) | 英文 HTML。兴趣示例和提示词也是英文。未提供配置时使用这份模板。 |
+| [`config.example.zh-CN.yaml`](config.example.zh-CN.yaml) | 简体中文 HTML。兴趣示例和提示词也是中文。 |
+
+以下命令复制英文模板。要从中文模板开始，将复制命令里的 `config.example.yaml` 换成 `config.example.zh-CN.yaml`。
 
 ```powershell
 # Windows PowerShell
@@ -77,7 +84,7 @@ screening_prompt: |
   优先选有直接方法贡献和实验验证的论文，允许不同术语表述同一研究主题。
 
 explanation_prompt: |
-  用中文向刚入门的读者讲解背景与动机、核心方法、具体实现和实验结果。
+  向刚入门的读者讲解背景与动机、核心方法、具体实现和实验结果。
   先讲直觉，再讲细节。专业术语首次出现时简释，每段集中讲一个要点。
   公式、代码或表格能帮助理解时再使用，实验部分保留关键设定、对比和数字。
 ```
@@ -96,10 +103,32 @@ explanation_prompt: |
 | `papers.allow_pdf_fallback` | `true` | arXiv HTML 无法提取正文时，临时获取 PDF 并在内存中解析。 |
 | `papers.save_pdf` | `false` | 开启后尽可能把入选论文的 PDF 保存到 `papers/`，包括已有可用 HTML 的论文。 |
 | `papers.max_source_chars` | `36000` | 发给模型的论文原文字符预算。日报会注明使用的是正文节选还是仅有摘要。 |
+| `report.language` | 默认模板为 `en` | 日报界面、入选理由和讲解的语言。`en` 为英文，`zh-CN` 为简体中文。 |
 | `report.html` / `report.markdown` | `true` / `false` | 选择导出格式。两个开关都关闭时，结果仍写入 SQLite。 |
 | `database` / `report.output_dir` / `papers.pdf_dir` | `data/digest.sqlite3` / `reports` / `papers` | 本地存储位置。使用自带的 Actions 工作流时请保留这些路径。 |
 
 首次用付费模型试跑，可以将 `max_candidates: 12` 和 `max_papers_per_day: 2` 写入配置。全文提取支持正文文字和部分 HTML 表格，提取不到的图表、扫描页或复杂公式可从日报里的链接回到原文查看。
+
+### 选择日报语言
+
+已有 `config.yaml` 时，在现有的 `report:` 下设置 `language: en` 并保留 `html: true`，就能切换到英文。已有配置如果省略 `report.language`，仍按原来的简体中文规则运行。
+
+```yaml
+report:
+  language: en
+  html: true
+  markdown: false
+  output_dir: reports
+```
+
+可以直接用英文模板离线预览，无需修改自己的配置。在 PowerShell 执行下面两条命令。macOS 或 Linux 用户把 Python 路径换成 `./.venv/bin/python`，再用浏览器打开 `reports/demo.html`。
+
+```powershell
+.\.venv\Scripts\python.exe -m paper_digest --config config.example.yaml demo
+Invoke-Item .\reports\demo.html
+```
+
+这个设置同时控制日报界面、归档首页和模型输出语言。用 `explanation_prompt` 继续配置讲解受众、结构和详略。论文标题、原文小节标题和你配置的研究方向名称按原样显示。需要用新语言重做已有日报时，用 `run` 指定日期。`render` 会按原记录的语言重新导出。归档里的 HTML 在该日期重新生成前仍使用原来的语言。
 
 ### 3. 验证真实日报
 
@@ -146,7 +175,7 @@ HTML 默认展开第一篇论文，篇内目录可以跳到各个栏目，引用
 | `PAPER_DIGEST_CONFIG_YAML` | `config.yaml` 的完整内容，包含研究方向和两种提示词。直接粘贴 YAML，保留换行和缩进，勿粘贴密钥。 | 自定义方向、提示词或其他参数时 |
 | `PUBLISH_PAGES` | `true` | 在 GitHub Pages 发布 HTML 时 |
 
-GitHub runner 无法读取你电脑上的 `.env` 或 `config.yaml`。未设置 `PAPER_DIGEST_CONFIG_YAML` 时，工作流使用仓库中的 `config.example.yaml`。每次在本地改完提示词或研究方向后，需要同步更新该变量才会影响后续云端运行。请保留 `database: data/digest.sqlite3`、`report.output_dir: reports` 和 `papers.pdf_dir: papers`，方便工作流在预定位置读取缓存和收集文件。需要下载报告时至少启用一种导出格式，使用 Pages 时保留 `report.html: true`。
+GitHub runner 无法读取你电脑上的 `.env` 或 `config.yaml`。未设置 `PAPER_DIGEST_CONFIG_YAML` 时，工作流会使用英文模板 `config.example.yaml`。要在云端用中文模板，将 `config.example.zh-CN.yaml` 的完整内容粘贴到该变量。若已经有自定义 YAML，直接修改其中的 `report.language`，并保留原来的兴趣和提示词。请保留 `database: data/digest.sqlite3`、`report.output_dir: reports` 和 `papers.pdf_dir: papers`，方便工作流在预定位置读取缓存和收集文件。需要下载报告时至少启用一种导出格式，使用 Pages 时保留 `report.html: true`。
 
 已有的 `PAPER_DIGEST_CONFIG_YAML` 如果写了更大的 `screen_batch_size`，将它改成 `1` 就能启用逐篇筛选。30 篇无缓存的候选会发起 30 次筛选调用，入选后仍逐篇调用模型生成讲解。
 

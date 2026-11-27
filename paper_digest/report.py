@@ -4,6 +4,7 @@ from tempfile import NamedTemporaryFile
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .config import ReportOptions
+from .locales import REPORT_TEXT
 from .math_render import equation_to_html, prose_to_html
 from .models import Digest
 from .table_render import explanation_text_to_html
@@ -15,13 +16,6 @@ TEMPLATES = Environment(
     lstrip_blocks=True,
 )
 TEMPLATES.filters.update(prose=prose_to_html, equation=equation_to_html, explanation_text=explanation_text_to_html)
-
-SOURCE_LABELS = {
-    "html": "基于 HTML 正文",
-    "pdf": "基于 PDF 正文",
-    "abstract": "基于摘要",
-    "demo": "示例正文",
-}
 
 
 def write_file(path: Path, contents: str) -> Path:
@@ -38,24 +32,29 @@ def write_file(path: Path, contents: str) -> Path:
 
 def write_html(digest: Digest, path: Path) -> Path:
     html = TEMPLATES.get_template("digest.html").render(
-        digest=digest, source_labels=SOURCE_LABELS, report_filename=path.name,
+        digest=digest, text=REPORT_TEXT[digest.language], report_filename=path.name,
     )
     return write_file(path, html)
 
 
 def markdown(digest: Digest) -> str:
-    lines = [f"# 论文日报 · {digest.date}", "", f"候选 {digest.candidate_count} 篇 · 入选 {len(digest.entries)} 篇", ""]
+    text = REPORT_TEXT[digest.language]
+    counts = text["counts_summary"].format(candidates=digest.candidate_count, selected=len(digest.entries))
+    lines = [f"# {text['title']} · {digest.date}", "", counts, ""]
     if not digest.entries:
-        lines += ["今天没有符合筛选条件的论文。" if digest.candidate_count else "此日期暂无可用候选论文。", ""]
+        lines += [text["no_selected"] if digest.candidate_count else text["no_candidates"], ""]
     for entry in digest.entries:
         paper, match = entry.paper, entry.match
-        scope = SOURCE_LABELS[entry.source_kind] + ("节选" if entry.is_excerpt else "")
-        lines += [f"## {paper.title}", "", f"{scope} · 相关性 {match.score}/100", "", f"**入选理由** {match.reason}", ""]
+        scope = text[f"{entry.source_kind}_source"] + (text["excerpt"] if entry.is_excerpt else "")
+        lines += [
+            f"## {paper.title}", "", f"{scope} · {text['relevance']} {match.score}/100",
+            "", f"**{text['selection_reason']}** {match.reason}", "",
+        ]
         if not digest.demo:
-            lines += [f"[arXiv 原文]({paper.arxiv_url}) · [Hugging Face]({paper.hf_url})", ""]
+            lines += [f"[{text['arxiv']}]({paper.arxiv_url}) · [Hugging Face]({paper.hf_url})", ""]
         result = entry.explanation
         if result is None:
-            lines += ["讲解暂不可用。", ""]
+            lines += [text["unavailable"], ""]
             continue
         lines += [result.overview, ""]
         for section in result.sections:

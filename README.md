@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-Follow your research interests on [Hugging Face Daily Papers](https://huggingface.co/papers). The digest screens titles and abstracts, reads available full text for selected papers, and uses an external LLM to explain them. Each date gets its own report with a table of contents, selection reasons, methods, experiments, limitations, and links to the papers. The sample configuration generates Chinese explanations. You can choose the language, audience, and depth in your prompt.
+Follow your research interests on [Hugging Face Daily Papers](https://huggingface.co/papers). The digest screens titles and abstracts, reads available full text for selected papers, and uses an external LLM to explain them. Each date gets its own report with a table of contents, selection reasons, methods, experiments, limitations, and links to the papers. The default example configuration generates English HTML, and a Simplified Chinese template is also included. Use the prompt to choose the audience and depth.
 
 ## Run locally
 
@@ -31,7 +31,14 @@ If `python` is unavailable on Windows and the Python launcher is installed, use 
 
 ### 2. Configure the model and research interests
 
-On first setup, create `.env` from [`.env.example`](.env.example) and `config.yaml` from [`config.example.yaml`](config.example.yaml). If those files already exist, edit them in place.
+On first setup, create `.env` from [`.env.example`](.env.example) and copy one of the complete templates to `config.yaml`. Continue editing your own `config.yaml` once it exists.
+
+| Template | Report output |
+| --- | --- |
+| [`config.example.yaml`](config.example.yaml) | English HTML with English sample interests and prompts. Used by default when a config has not been supplied. |
+| [`config.example.zh-CN.yaml`](config.example.zh-CN.yaml) | Simplified Chinese HTML with Chinese sample interests and prompts. |
+
+The following commands copy the English template. Replace `config.example.yaml` with `config.example.zh-CN.yaml` in the copy command to start with the Chinese template.
 
 ```powershell
 # Windows PowerShell
@@ -78,7 +85,7 @@ screening_prompt: |
   Accept relevant work that uses different terminology.
 
 explanation_prompt: |
-  Explain to a newcomer in English. Cover motivation, the core method,
+  Explain to a newcomer. Cover motivation, the core method,
   implementation, and experiments. Define terms on first use and start with intuition.
   Use short paragraphs. Include equations, code, or a table when they clarify the point.
 ```
@@ -97,10 +104,32 @@ Define at least one interest and give each interest a unique `name`. Change `scr
 | `papers.allow_pdf_fallback` | `true` | Fetches and parses a PDF in memory if usable arXiv HTML is unavailable. |
 | `papers.save_pdf` | `false` | Saves selected papers' PDFs to `papers/` when available, including papers with usable HTML. |
 | `papers.max_source_chars` | `36000` | Character budget for paper text sent to the model. The report identifies excerpts or abstract-only sources. |
+| `report.language` | `en` in the default template | Language for report labels, selection reasons, and explanations. Use `en` for English or `zh-CN` for Simplified Chinese. |
 | `report.html` / `report.markdown` | `true` / `false` | Select the output formats. SQLite still stores the digest when both exports are off. |
 | `database` / `report.output_dir` / `papers.pdf_dir` | `data/digest.sqlite3` / `reports` / `papers` | Local storage paths. Keep these defaults for the bundled Actions workflow. |
 
 For a small paid-model trial, set `max_candidates: 12` and `max_papers_per_day: 2`. The source reader extracts text and some HTML tables. Check the original paper for figures, scanned pages, or complex equations that are missing from the extraction.
+
+### Choose the report language
+
+To switch an existing `config.yaml` to English, set `language: en` inside its `report:` section and keep `html: true`. Config files that omit `report.language` retain the previous Simplified Chinese behavior.
+
+```yaml
+report:
+  language: en
+  html: true
+  markdown: false
+  output_dir: reports
+```
+
+Preview the English template directly without modifying your local config. Run the following commands in PowerShell, or replace the Python path with `./.venv/bin/python` on macOS or Linux and open `reports/demo.html` in a browser.
+
+```powershell
+.\.venv\Scripts\python.exe -m paper_digest --config config.example.yaml demo
+Invoke-Item .\reports\demo.html
+```
+
+The setting controls the report UI, archive index, and model output language. Keep using `explanation_prompt` for audience, structure, and depth. Paper titles, source section headings, and configured interest names appear as supplied. Use `run` with the target date to regenerate an existing digest in the new language. `render` re-exports saved explanations in their stored language. Archived HTML keeps its language until that date is regenerated.
 
 ### 3. Verify a real report
 
@@ -147,7 +176,7 @@ Open your repository's **Settings → Secrets and variables → Actions**.
 | `PAPER_DIGEST_CONFIG_YAML` | The entire contents of `config.yaml`, including the interest list and both prompts. Paste plain YAML with its indentation and line breaks. Keep credentials out of it. | Custom interests, prompts, or other settings |
 | `PUBLISH_PAGES` | `true` | Publishing HTML on GitHub Pages |
 
-GitHub does not read the `.env` or `config.yaml` on your computer. If `PAPER_DIGEST_CONFIG_YAML` is unset, the workflow copies the repository's `config.example.yaml`. After editing your local prompts or interests, update the variable for future cloud runs. Keep `database: data/digest.sqlite3`, `report.output_dir: reports`, and `papers.pdf_dir: papers` so the workflow can find its outputs and caches. Enable at least one report format for downloads and keep `report.html: true` if publishing to Pages.
+GitHub does not read the `.env` or `config.yaml` on your computer. If `PAPER_DIGEST_CONFIG_YAML` is unset, the workflow uses the English `config.example.yaml`. For Simplified Chinese, paste the complete contents of `config.example.zh-CN.yaml` into that variable. If you already have a custom YAML value, update `report.language` there and keep your interests and prompts. Keep `database: data/digest.sqlite3`, `report.output_dir: reports`, and `papers.pdf_dir: papers` so the workflow can find its outputs and caches. Enable at least one report format for downloads and keep `report.html: true` if publishing to Pages.
 
 If your existing `PAPER_DIGEST_CONFIG_YAML` explicitly sets a larger `screen_batch_size`, change it to `1` to use individual screening. Thirty uncached candidates then take 30 screening calls. The digest explains each selected paper in a separate call.
 
