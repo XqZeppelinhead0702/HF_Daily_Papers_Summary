@@ -10,7 +10,7 @@ interests:
     keywords: [vision-language model, visual grounding, multimodal reasoning]
 
 max_candidates: 60
-screen_batch_size: 12
+screen_batch_size: 1
 min_score: 65
 max_papers_per_day: 5
 

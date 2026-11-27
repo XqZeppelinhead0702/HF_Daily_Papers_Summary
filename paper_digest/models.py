@@ -21,11 +21,14 @@ class Paper(Model):
         return f"https://huggingface.co/papers/{self.id}"
 
 
-class Match(Model):
-    paper_id: str
+class ScreeningScore(Model):
     score: int = Field(strict=True, ge=0, le=100)
     topics: list[str]
     reason: str = Field(min_length=1)
+
+
+class Match(ScreeningScore):
+    paper_id: str
 
 
 class Screening(Model):

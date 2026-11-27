@@ -89,7 +89,7 @@ Define at least one interest and give each interest a unique `name`. Change `scr
 | --- | --- | --- |
 | `timezone` | `Asia/Shanghai` | Time zone used to interpret “today.” |
 | `max_candidates` | `60` | Maximum number of papers sent to screening before any filtering. Increasing it can add screening calls and input tokens. |
-| `screen_batch_size` | `12` | Papers per screening call. For example, 24 candidates at 12 per batch take two calls. |
+| `screen_batch_size` | `1` | Papers per screening call. By default, the model scores one paper at a time and the program assigns the ID. Set a larger batch size to reduce the number of model calls. |
 | `min_score` | `65` | Minimum relevance score out of 100. |
 | `max_papers_per_day` | `5` | Maximum number of selected papers that get full explanations per date. |
 | `llm.json_mode` | `true` | Requests `response_format: json_object` from the provider. If the provider rejects that option, set this to `false`. The application still validates the returned JSON. |
@@ -149,6 +149,8 @@ Open your repository's **Settings → Secrets and variables → Actions**.
 
 GitHub does not read the `.env` or `config.yaml` on your computer. If `PAPER_DIGEST_CONFIG_YAML` is unset, the workflow copies the repository's `config.example.yaml`. After editing your local prompts or interests, update the variable for future cloud runs. Keep `database: data/digest.sqlite3`, `report.output_dir: reports`, and `papers.pdf_dir: papers` so the workflow can find its outputs and caches. Enable at least one report format for downloads and keep `report.html: true` if publishing to Pages.
 
+If your existing `PAPER_DIGEST_CONFIG_YAML` explicitly sets a larger `screen_batch_size`, change it to `1` to use individual screening. Thirty uncached candidates then take 30 screening calls. The digest explains each selected paper in a separate call.
+
 ### 3. Enable GitHub Pages if you want an online report
 
 The Actions ZIP download works without Pages. To publish a public site, open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. Set the repository variable `PUBLISH_PAGES` to `true` as described above. The bundled **Daily Papers** workflow builds and deploys the site.
@@ -180,6 +182,7 @@ For a cloud run, open **Actions → Daily Papers → the run → digest** and ex
 | Runs still use the default prompts | Check the local config path logged by `run`. On GitHub, update the full `PAPER_DIGEST_CONFIG_YAML` repository variable. Use `run` to regenerate explanations after editing a prompt. |
 | Hugging Face returns HTTP 400 or says the date is unavailable | Clear the manual `date` field or choose a date that is already open. An explicitly requested date fails if it is unavailable. |
 | The model returns HTTP 400, 401, 403, or 429 | Check the base URL and model ID. For 400, disable `llm.json_mode` if the provider rejects JSON mode. For 401/403, check the key and model access. For 429, check your limit and quota. |
+| Batch screening returns missing, duplicate, or unknown paper IDs | This can occur with a `screen_batch_size` greater than `1`. The digest keeps valid scores, tries one follow-up for multiple unresolved candidates, then scores any remaining candidates individually. |
 | An explanation has invalid JSON or gets cut off | The generator makes one additional generation attempt. It sends a usable draft back in a follow-up to repair its structure while preserving facts, numbers, and citations. If the draft is incomplete, it requests a shorter rewrite from the source. If it keeps happening, shorten the prompt or use a model with more output capacity. |
 | A report is empty or one paper has no explanation | Read the note in the report. No candidates or no papers reaching `min_score` can produce an empty report. A failed explanation leaves the other papers in the report and returns exit code `2`. Check **Artifacts** for any HTML already generated, even if GitHub marks the run failed. |
 | The run has no downloadable artifact | Check **Generate report** for errors and **Upload reports and optional PDFs** for matching files. Enable an export format and use the workflow's expected output directory, `reports`. |

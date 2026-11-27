@@ -4,7 +4,7 @@ from datetime import date
 import httpx
 
 from .config import Settings
-from .llm import EXPLAIN_RULES, SCREEN_RULES, LLM, LLMError
+from .llm import EXPLAIN_RULES, SCREEN_RULES, SINGLE_SCREEN_RULES, LLM, LLMError
 from .models import Digest, DigestEntry, Explanation, Match, Reference, Screening
 from .sources import list_papers, read_paper
 from .storage import Store, cache_key
@@ -22,9 +22,10 @@ def run_day(day: date, settings: Settings, client: httpx.Client, llm: LLM, store
 
     for start in range(0, len(papers), batch_size):
         batch = papers[start:start + batch_size]
+        rules = SINGLE_SCREEN_RULES if len(batch) == 1 else SCREEN_RULES
         key = cache_key(
             "screen-v1", provider, llm.connection.screen_model, llm.options.json_mode,
-            SCREEN_RULES, settings.screening_prompt, interests, [paper.model_dump() for paper in batch],
+            rules, settings.screening_prompt, interests, [paper.model_dump() for paper in batch],
         )
         result = store.get(key, Screening)
         if result is None:

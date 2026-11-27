@@ -88,7 +88,7 @@ explanation_prompt: |
 | --- | --- | --- |
 | `timezone` | `Asia/Shanghai` | 程序用来确定“今天”的时区。 |
 | `max_candidates` | `60` | 筛选前的候选论文上限。调大后可能增加模型筛选次数和输入 token。 |
-| `screen_batch_size` | `12` | 一次筛选调用处理的论文数。例如 24 篇候选、每批 12 篇，需要调用两次。 |
+| `screen_batch_size` | `1` | 一次筛选调用处理的论文数。默认逐篇评分，由程序绑定论文 ID。希望减少调用次数时可调大。 |
 | `min_score` | `65` | 相关性入选门槛，满分为 100。 |
 | `max_papers_per_day` | `5` | 每个日期进入全文解读阶段的论文数上限。 |
 | `llm.json_mode` | `true` | 向服务商请求 `response_format: json_object`。服务商拒绝这个选项时可设为 `false`，程序仍会校验返回的 JSON。 |
@@ -148,6 +148,8 @@ HTML 默认展开第一篇论文，篇内目录可以跳到各个栏目，引用
 
 GitHub runner 无法读取你电脑上的 `.env` 或 `config.yaml`。未设置 `PAPER_DIGEST_CONFIG_YAML` 时，工作流使用仓库中的 `config.example.yaml`。每次在本地改完提示词或研究方向后，需要同步更新该变量才会影响后续云端运行。请保留 `database: data/digest.sqlite3`、`report.output_dir: reports` 和 `papers.pdf_dir: papers`，方便工作流在预定位置读取缓存和收集文件。需要下载报告时至少启用一种导出格式，使用 Pages 时保留 `report.html: true`。
 
+已有的 `PAPER_DIGEST_CONFIG_YAML` 如果写了更大的 `screen_batch_size`，将它改成 `1` 就能启用逐篇筛选。30 篇无缓存的候选会发起 30 次筛选调用，入选后仍逐篇调用模型生成讲解。
+
 ### 3. 按需开启 GitHub Pages
 
 只需要下载 Actions 产物时，可以直接进入下一步。需要公开网页时，打开 **Settings → Pages → Build and deployment**，将 **Source** 设为 **GitHub Actions**。再按上一步添加仓库变量 `PUBLISH_PAGES`，值填 `true`。本项目自带的 **Daily Papers** 工作流负责构建和部署站点。
@@ -179,6 +181,7 @@ Pages 首页最多列出最近 3 个有日报的日期，点击某一天才会�
 | 日报仍按默认提示词讲解 | 本地看 `run` 日志里的配置路径。GitHub 上更新仓库变量 `PAPER_DIGEST_CONFIG_YAML` 的完整内容。修改提示词后用 `run` 重新生成讲解。 |
 | Hugging Face 返回 HTTP 400 或提示日期尚未开放 | 将手动运行的 `date` 留空，或填写已开放的日期。显式指定的日期尚未开放时，该次运行会报错。 |
 | 模型返回 HTTP 400、401、403 或 429 | 先核对基础地址和模型 ID。400 且服务商不支持 JSON mode 时，将 `llm.json_mode` 设为 `false`。401 或 403 检查密钥和模型权限，429 检查速率限制和剩余额度。 |
+| 批量筛选返回遗漏、重复或未知的论文 ID | `screen_batch_size` 大于 `1` 时可能出现。程序保留有效评分，多篇需要补评时先批量补评一次，剩余候选逐篇评分。 |
 | 讲解的 JSON 无效或输出被截断 | 程序会额外请求生成一次。有可用草稿时接续上一轮，只修复结构并保留事实、数字和引用。草稿不完整时根据原文生成更紧凑的版本。若经常失败，可缩短提示词或使用输出容量更大的模型。 |
 | 日报为空或个别论文没有讲解 | 查看日报中的提示。没有候选或论文未达到 `min_score` 都会产生空日报。个别讲解失败时，其他论文会保留，命令返回退出码 `2`。即使运行标为失败，也可在 **Artifacts** 查看已生成的 HTML。 |
 | 运行后没有可下载的产物 | 查看 **Generate report** 是否报错，以及 **Upload reports and optional PDFs** 是否找到文件。至少开启一种导出格式，报告目录保持为工作流指定的 `reports`。 |

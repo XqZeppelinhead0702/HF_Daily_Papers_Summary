@@ -40,7 +40,7 @@ class Settings(Model):
     database: Path = Path("data/digest.sqlite3")
     interests: list[Interest] = Field(min_length=1)
     max_candidates: int = Field(default=60, ge=1, le=500)
-    screen_batch_size: int = Field(default=12, ge=1, le=30)
+    screen_batch_size: int = Field(default=1, ge=1, le=30)
     min_score: int = Field(default=65, ge=0, le=100)
     max_papers_per_day: int = Field(default=5, ge=1, le=30)
     screening_prompt: str
