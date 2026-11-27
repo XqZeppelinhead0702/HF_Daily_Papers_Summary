@@ -22,10 +22,33 @@ class SourceError(RuntimeError):
     pass
 
 
+class DailyPapersDateUnavailable(SourceError):
+    def __init__(self, latest: date):
+        self.latest = latest
+        super().__init__(f"Hugging Face Daily Papers 目前只开放到 {latest.isoformat()}")
+
+
+def _check_daily_papers_date(response: httpx.Response) -> None:
+    body = next(response.iter_bytes(chunk_size=4096), b"")
+    try:
+        payload = json.loads(body)
+        message = payload.get("error") if isinstance(payload, dict) else None
+        if not isinstance(message, str):
+            return
+        bound = re.search(r'"date" must be less than or equal to "(\d{4}-\d{2}-\d{2})T', message)
+        latest = date.fromisoformat(bound[1]) if bound else None
+    except ValueError:
+        return
+    if latest is not None:
+        raise DailyPapersDateUnavailable(latest)
+
+
 def get_bytes(client: httpx.Client, url: str, max_bytes: int, **kwargs) -> bytes:
     for attempt in range(3):
         try:
             with client.stream("GET", url, **kwargs) as response:
+                if url == DAILY_PAPERS_URL and response.status_code == 400:
+                    _check_daily_papers_date(response)
                 response.raise_for_status()
                 body = bytearray()
                 for block in response.iter_bytes(chunk_size=65536):

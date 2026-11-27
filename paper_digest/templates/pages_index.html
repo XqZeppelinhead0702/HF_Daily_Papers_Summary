@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>论文日报 · 历史归档</title>
+  <style>
+    {% include 'digest.css' %}
+    .archive { max-width: 58rem; display: grid; gap: 1.8rem; padding-block: 1.9rem 3rem; }
+    .latest { padding: clamp(1.25rem, 4vw, 2.4rem); }
+    .latest h2, .history h2 { margin-bottom: .75rem; font-size: 1.1rem; }
+    .archive-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+    .archive-actions a { border-radius: .4rem; padding: .45rem .75rem; font-size: .875rem; font-weight: 650; text-decoration: none; }
+    .archive-read { color: #fff; background: var(--accent); }
+    .archive-read:hover { background: #293d8b; }
+    .archive-download { border: 1px solid var(--line); background: var(--sheet); }
+    .archive-download:hover { border-color: var(--accent); text-decoration: underline; }
+    .history { padding-inline: .15rem; }
+    .history ul { padding: 0; margin: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .55rem; }
+    .history li { padding: .75rem .9rem; background: var(--sheet); border: 1px solid var(--line); border-radius: .4rem; }
+    .history time { display: block; margin-bottom: .45rem; font-weight: 650; }
+    .archive time { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <div class="mast-top"><span>Hugging Face Daily Papers</span></div>
+      <div class="mast-main"><h1>论文日报</h1></div>
+    </div>
+  </header>
+  <main class="wrap archive">
+    <section class="paper latest" aria-labelledby="latest-title">
+      <h2 id="latest-title">最新日报</h2>
+      <div class="archive-actions">
+        <a class="archive-read" href="reports/{{ latest }}.html">阅读 <time datetime="{{ latest }}">{{ latest }}</time> 日报</a>
+        <a class="archive-download" href="reports/{{ latest }}.html" download aria-label="下载 {{ latest }} 日报 HTML">下载 HTML</a>
+      </div>
+    </section>
+    {% if earlier %}
+      <section class="history" aria-labelledby="history-title">
+        <h2 id="history-title">往期日报</h2>
+        <ul>
+          {% for day in earlier %}
+            <li>
+              <time datetime="{{ day }}">{{ day }}</time>
+              <div class="archive-actions">
+                <a class="archive-read" href="reports/{{ day }}.html" aria-label="阅读 {{ day }} 日报">阅读日报</a>
+                <a class="archive-download" href="reports/{{ day }}.html" download aria-label="下载 {{ day }} 日报 HTML">下载 HTML</a>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import argparse
 import logging
+from collections import deque
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -12,7 +13,7 @@ from .demo import demo_digest
 from .llm import LLM, LLMError
 from .pipeline import run_day
 from .report import write_html, write_reports
-from .sources import SourceError, list_papers
+from .sources import DailyPapersDateUnavailable, SourceError, list_papers
 from .storage import Store
 
 LOGGER = logging.getLogger(__name__)
@@ -79,9 +80,12 @@ def main() -> int:
             llm = LLM(client, connection, settings.llm)
             store = Store(settings.database)
             status = 0
+            pending = deque(target - timedelta(days=offset) for offset in reversed(range(args.lookback)))
+            attempted: set[date] = set()
             try:
-                for offset in reversed(range(args.lookback)):
-                    day = target - timedelta(days=offset)
+                while pending:
+                    day = pending.popleft()
+                    attempted.add(day)
                     try:
                         digest = run_day(day, settings, client, llm, store)
                         for output in write_reports(digest, settings.report):
@@ -89,6 +93,15 @@ def main() -> int:
                         if any(entry.explanation is None for entry in digest.entries):
                             status = max(status, 2)
                         LOGGER.info("%s 入选 %d 篇，结果已保存至 SQLite", day, len(digest.entries))
+                    except DailyPapersDateUnavailable as error:
+                        if args.date is not None or error.latest >= day:
+                            LOGGER.error("%s 生成失败，%s", day, error)
+                            status = 2
+                            continue
+                        LOGGER.info("%s 尚未开放，%s", day, error)
+                        pending = deque(available for available in pending if available <= error.latest)
+                        if error.latest not in attempted and error.latest not in pending:
+                            pending.append(error.latest)
                     except (SourceError, LLMError) as error:
                         LOGGER.error("%s 生成失败，%s", day, error)
                         status = max(status, 2)

@@ -37,7 +37,9 @@ def write_file(path: Path, contents: str) -> Path:
 
 
 def write_html(digest: Digest, path: Path) -> Path:
-    html = TEMPLATES.get_template("digest.html").render(digest=digest, source_labels=SOURCE_LABELS)
+    html = TEMPLATES.get_template("digest.html").render(
+        digest=digest, source_labels=SOURCE_LABELS, report_filename=path.name,
+    )
     return write_file(path, html)
 
 

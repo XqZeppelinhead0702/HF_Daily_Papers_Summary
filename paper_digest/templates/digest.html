@@ -41,7 +41,10 @@
     <div class="wrap">
       <div class="mast-top">
         <span>Hugging Face Daily Papers</span>
-        <time datetime="{{ digest.date }}">{{ digest.date }}</time>
+        <div class="mast-actions">
+          <time datetime="{{ digest.date }}">{{ digest.date }}</time>
+          <a class="mast-download" href="./{{ report_filename }}" download>下载 HTML</a>
+        </div>
       </div>
       <div class="mast-main">
         <h1>论文日报</h1>

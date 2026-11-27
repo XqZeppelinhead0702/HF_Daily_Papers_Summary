@@ -25,6 +25,8 @@ jobs:
   digest:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    outputs:
+      pages_ready: ${{ steps.pages.outputs.ready }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -98,3 +100,53 @@ jobs:
         with:
           path: data/digest.sqlite3
           key: ${{ steps.sqlite.outputs.cache-primary-key }}
+
+      - name: Restore published report history
+        id: pages_history
+        if: ${{ vars.PUBLISH_PAGES == 'true' && github.ref_name == github.event.repository.default_branch && !inputs.demo }}
+        uses: actions/cache/restore@v6
+        continue-on-error: true
+        with:
+          path: data/pages-history
+          key: paper-digest-pages-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: paper-digest-pages-v1-
+
+      - name: Build the public report site
+        id: pages
+        if: ${{ steps.pages_history.outcome != 'skipped' }}
+        run: |
+          site_dir="$(mktemp -d)"
+          python -m paper_digest.pages --output "$site_dir"
+          if [[ -f "$site_dir/index.html" ]]; then
+            echo "directory=$site_dir" >> "$GITHUB_OUTPUT"
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload GitHub Pages bundle
+        if: ${{ steps.pages.outputs.ready == 'true' }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ steps.pages.outputs.directory }}
+
+      - name: Save published report history
+        if: ${{ steps.pages.outputs.ready == 'true' }}
+        uses: actions/cache/save@v6
+        continue-on-error: true
+        with:
+          path: data/pages-history
+          key: paper-digest-pages-v1-${{ github.run_id }}-${{ github.run_attempt }}
+
+  publish:
+    needs: digest
+    if: ${{ needs.digest.outputs.pages_ready == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy public reports
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -84,7 +84,17 @@ HTML 日报默认展开第一篇论文的讲解。篇内目录可以跳到按 `e
 4. 打开 **Actions → Daily Papers → Run workflow**。首次可以勾选 `demo` 验证云端能生成 HTML，无需配置模型。试跑真实流程时取消勾选 `demo`，可在 `date` 填 `2025-10-29`。留空则处理北京时间当天。
 5. 运行结束后，进入该次运行页面的 **Artifacts** 下载并解压，打开里面的 HTML。产物保留 30 天。PDF 仅在开启 `papers.save_pdf` 并成功获取时随产物上传。
 
-定时运行会回看当天和前一天。私有仓库会尝试通过 Actions 缓存保留 SQLite，从而复用已完成的 LLM 结果。缓存被清理后可以继续运行，已生成的历史日报可在产物到期前下载留存。
+定时运行会检查当天和前一天。Hugging Face 尚未开放当天时，工作流会使用已开放的最新日期。私有仓库会尝试通过 Actions 缓存保留 SQLite，从而复用已完成的 LLM 结果。缓存被清理后可以继续运行，已生成的历史日报可在产物到期前下载留存。
+
+### 在 GitHub Pages 上直接看日报
+
+GitHub Pages 会提供一个固定网址，打开即可阅读完整的 HTML 日报。私有仓库需要使用支持 Pages 的套餐，仓库保持私有时，发布出的日报仍可能公开。 [GitHub Pages 套餐说明](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
+
+1. 打开 **Settings → Pages**，将发布来源选为 **GitHub Actions**。
+2. 在 **Settings → Secrets and variables → Actions → Variables** 添加 `PUBLISH_PAGES`，值填 `true`。工作流配置中保留 `report.html: true` 和 `report.output_dir: reports`。
+3. 到 **Actions → Daily Papers → Run workflow** 选择默认分支，保持 `demo` 不勾选，指定一个 Hugging Face 已开放的日期。等 `publish` 任务成功后，从 **Settings → Pages → Visit site** 打开站点。以后定时运行会更新同一个网址。
+
+站点最多保留最近 3 个有日报的日期。首页只加载索引，点开某一天才加载当天的报告。可以通过索引或报告页的 **下载 HTML** 保存单文件，在旧日报下线前留一份离线副本。上限适用于公开站点及其发布缓存。本地报告和 SQLite 数据独立保留，Actions 产物仍按 30 天到期。若缓存被清理，下一次发布可能少于 3 份。生成失败或没有新的日期版 HTML 时，已有站点会继续可用。
 
 ## Windows 每日运行
 

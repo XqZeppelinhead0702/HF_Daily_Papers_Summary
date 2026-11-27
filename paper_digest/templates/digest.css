@@ -30,6 +30,10 @@ a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outli
 .masthead .wrap { padding-block: 1.65rem 2.4rem; }
 .mast-top { display: flex; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; padding-bottom: .75rem; border-bottom: 1px solid #a9bde14d; }
 .mast-top span, .mast-top time { color: #d3ddf4; font-size: .85rem; }
+.mast-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .85rem; }
+.mast-download { color: #f8faff; border: 1px solid #a9bde16e; border-radius: .35rem; padding: .16rem .52rem; font-size: .875rem; font-weight: 650; text-decoration: none; }
+.mast-download:hover { background: #a9bde133; }
+.mast-download:focus-visible { outline-color: #d3ddf4; }
 .mast-top time, .score, .counts strong { font-variant-numeric: tabular-nums; }
 .mast-main { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem 2rem; margin-top: 1.7rem; }
 .mast-main h1 { font: 700 clamp(2.85rem, 6.5vw, 4.6rem)/1.04 var(--serif); letter-spacing: .045em; }
@@ -127,6 +131,6 @@ a.reference:hover { text-decoration: underline; }
   .mast-top span, .mast-top time, .counts dt, .demo { color: var(--muted); }
   .layout { display: block; }
   .wrap { width: 100%; }
-  .toc, .back-link, .section-nav, .reading > summary { display: none; }
+  .toc, .back-link, .section-nav, .reading > summary, .mast-download { display: none; }
   .paper { box-shadow: none; }
 }

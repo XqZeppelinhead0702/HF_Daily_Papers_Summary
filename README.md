@@ -84,7 +84,17 @@ The [Daily Papers workflow](.github/workflows/daily-papers.yml) runs on a GitHub
 4. Go to **Actions → Daily Papers → Run workflow**. Check `demo` for a first run that generates HTML without a model key. For a live run, clear `demo` and enter a date such as `2025-10-29`. Leave the date blank to process the current date in Beijing time.
 5. Open the completed run, download its **Artifacts**, extract the archive, and open the HTML. Artifacts are retained for 30 days. The artifact includes PDFs only when `papers.save_pdf` is enabled and the files were successfully fetched.
 
-Scheduled runs cover the current date and the previous date. In a private repository, the workflow attempts to cache SQLite so later runs can reuse successful LLM results. Runs can continue after cache eviction. Download any reports you want to keep before their artifacts expire.
+Scheduled runs check the current date and the previous date. When Hugging Face has yet to open the current date, the workflow uses the latest available date. In a private repository, the workflow attempts to cache SQLite so later runs can reuse successful LLM results. Runs can continue after cache eviction. Download any reports you want to keep before their artifacts expire.
+
+### View reports online with GitHub Pages
+
+GitHub Pages serves the full HTML reports from a single URL. With a private repository, your GitHub plan must support Pages. The published reports can still be public when the repository itself is private. [GitHub Pages plan availability](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
+
+1. Open **Settings → Pages** and select **GitHub Actions** as the publishing source.
+2. Under **Settings → Secrets and variables → Actions → Variables**, create `PUBLISH_PAGES` with the value `true`. Keep `report.html: true` and `report.output_dir: reports` in the workflow configuration.
+3. Run **Actions → Daily Papers → Run workflow** on the default branch. Leave `demo` unchecked and choose a date that Hugging Face has opened. After the `publish` job succeeds, open **Settings → Pages → Visit site**. The same site URL is updated by later scheduled runs.
+
+The site publishes the three latest available report dates. The index loads only links, and each report opens on its own page. Use **下载 HTML** on the index or report page to save a copy for offline reading before it rolls off the site. This limit applies to the public site and its publishing cache. Local reports and SQLite are retained separately, and downloadable Actions artifacts continue to expire after 30 days. A cache eviction can leave fewer than three dates in the next deployment. Runs that fail or produce no dated HTML leave the last deployed site available.
 
 ## Daily runs on Windows
 
